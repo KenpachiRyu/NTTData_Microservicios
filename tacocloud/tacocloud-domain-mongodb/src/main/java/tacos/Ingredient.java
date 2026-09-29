@@ -1,5 +1,6 @@
 package tacos;
 
+import java.math.BigDecimal;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -18,6 +19,13 @@ public class Ingredient {
   private String id;
   private String name;
   private Type type;
+
+  // TC-13: Campo de precio unitario usando BigDecimal
+  private BigDecimal unitPrice;
+
+  public Ingredient(String id, String name, Type type) {
+    this(id, name, type, null);
+  }
 
   public enum Type {
     WRAP, PROTEIN, VEGGIES, CHEESE, SAUCE

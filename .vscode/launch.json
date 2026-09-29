@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-TacoCloudApplication<tacocloud>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "tacos.TacoCloudApplication",
+            "projectName": "tacocloud",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

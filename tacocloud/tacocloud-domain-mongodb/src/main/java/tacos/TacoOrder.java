@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.math.BigDecimal; // agregado para poder realizar el calculo en el servidor
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -37,6 +38,7 @@ public class TacoOrder implements Serializable {
 
   private String ccCVV;
 
+  private BigDecimal total;
 
   private List<Taco> tacos = new ArrayList<>();
 
