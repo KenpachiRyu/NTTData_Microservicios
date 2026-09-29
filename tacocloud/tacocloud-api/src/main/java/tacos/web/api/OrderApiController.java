@@ -46,6 +46,9 @@ public class OrderApiController {
   private tacos.physics.TacoPhysicsValidator physicsValidator;
   private OrderMapper orderMapper;
   private ReorderService reorderService;
+  private OrderStateService orderStateService;
+  private tacos.messaging.outbox.OutboxService outboxService;
+  private tacos.messaging.outbox.OutboxDispatcher outboxDispatcher;
 
   @org.springframework.beans.factory.annotation.Autowired
   public OrderApiController(OrderRepository repo,
@@ -56,7 +59,10 @@ public class OrderApiController {
                             @org.springframework.beans.factory.annotation.Autowired(required = false) InventoryService inventoryService,
                             @org.springframework.beans.factory.annotation.Autowired(required = false) tacos.physics.TacoPhysicsValidator physicsValidator,
                             @org.springframework.beans.factory.annotation.Autowired(required = false) OrderMapper orderMapper,
-                            @org.springframework.beans.factory.annotation.Autowired(required = false) ReorderService reorderService) {
+                            @org.springframework.beans.factory.annotation.Autowired(required = false) ReorderService reorderService,
+                            @org.springframework.beans.factory.annotation.Autowired(required = false) OrderStateService orderStateService,
+                            @org.springframework.beans.factory.annotation.Autowired(required = false) tacos.messaging.outbox.OutboxService outboxService,
+                            @org.springframework.beans.factory.annotation.Autowired(required = false) tacos.messaging.outbox.OutboxDispatcher outboxDispatcher) {
     this.repo = repo;
     this.orderMessages = orderMessages;
     this.emailOrderService = emailOrderService;
@@ -66,6 +72,9 @@ public class OrderApiController {
     this.physicsValidator = physicsValidator;
     this.orderMapper = orderMapper != null ? orderMapper : new OrderMapper();
     this.reorderService = reorderService;
+    this.orderStateService = orderStateService;
+    this.outboxService = outboxService;
+    this.outboxDispatcher = outboxDispatcher;
   }
 
   public OrderApiController(OrderRepository repo,
@@ -76,14 +85,14 @@ public class OrderApiController {
                             InventoryService inventoryService,
                             tacos.physics.TacoPhysicsValidator physicsValidator,
                             OrderMapper orderMapper) {
-    this(repo, orderMessages, emailOrderService, ingredientRepo, pricingService, inventoryService, physicsValidator, orderMapper, null);
+    this(repo, orderMessages, emailOrderService, ingredientRepo, pricingService, inventoryService, physicsValidator, orderMapper, null, null, null, null);
   }
 
   public OrderApiController(OrderRepository repo,
                             OrderMessagingService orderMessages,
                             EmailOrderService emailOrderService,
                             IngredientRepository ingredientRepo) {
-    this(repo, orderMessages, emailOrderService, ingredientRepo, null, null, null, new OrderMapper());
+    this(repo, orderMessages, emailOrderService, ingredientRepo, null, null, null, new OrderMapper(), null, null, null, null);
   }
 
   @GetMapping(produces="application/json")
@@ -142,11 +151,23 @@ public class OrderApiController {
                 ? inventoryService.reserve(pricedOrder.getId(), null, demand).then()
                 : Mono.empty();
 
-            // TC-07: Guardar y luego publicar (Save-then-Send)
-            return reserveMono.then(repo.save(pricedOrder));
-          })
-          .doOnNext(orderMessages::sendOrder)
-          .map(this::toOrderResponse);
+            // TC-07 / TC-29: Guardar orden y registrar evento en outbox transaccional
+            Mono<TacoOrder> saveOrderMono = (outboxService != null)
+                ? outboxService.saveOrderWithOutbox(pricedOrder, tacos.messaging.event.OrderEventType.ORDER_CREATED)
+                : repo.save(pricedOrder).doOnNext(orderMessages::sendOrder);
+
+            return reserveMono.then(saveOrderMono)
+                .flatMap(saved -> {
+                  if (outboxDispatcher != null) {
+                    return outboxDispatcher.claimNextPendingEvent()
+                        .flatMap(outboxDispatcher::dispatch)
+                        .thenReturn(saved)
+                        .defaultIfEmpty(saved);
+                  }
+                  return Mono.just(saved);
+                })
+                .map(this::toOrderResponse);
+          });
     }
 
     // Fallback reactivo si pricingService no está inyectado (por ejemplo en tests unitarios antiguos)
@@ -166,9 +187,19 @@ public class OrderApiController {
               .reduce(BigDecimal.ZERO, BigDecimal::add);
 
           order.setTotal(calculatedTotal);
-          return repo.save(order);
+          return (outboxService != null)
+              ? outboxService.saveOrderWithOutbox(order, tacos.messaging.event.OrderEventType.ORDER_CREATED)
+              : repo.save(order).doOnNext(orderMessages::sendOrder);
         })
-        .doOnNext(orderMessages::sendOrder)
+        .flatMap(saved -> {
+          if (outboxDispatcher != null) {
+            return outboxDispatcher.claimNextPendingEvent()
+                .flatMap(outboxDispatcher::dispatch)
+                .thenReturn(saved)
+                .defaultIfEmpty(saved);
+          }
+          return Mono.just(saved);
+        })
         .map(this::toOrderResponse);
   }
 
@@ -322,6 +353,38 @@ public class OrderApiController {
           return Mono.just(ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
               .body(new ReorderResponse(false, null, null, null, null, ex.getMessage())));
         })
+        .defaultIfEmpty(ResponseEntity.notFound().build());
+  }
+
+  // =========================================================================
+  // TC-25: Flujo de estados de una orden (PATCH status y POST cancel)
+  // =========================================================================
+  @PatchMapping(path="/{id}/status", consumes="application/json")
+  public Mono<ResponseEntity<OrderResponse>> updateOrderStatus(
+      @PathVariable("id") String id,
+      @RequestBody OrderStatusUpdateRequest request,
+      Authentication auth) {
+    if (orderStateService == null) {
+      return Mono.just(ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build());
+    }
+    return orderStateService.transition(id, request.getStatus(), request.getReason(), "API", auth)
+        .map(this::toOrderResponse)
+        .map(ResponseEntity::ok)
+        .defaultIfEmpty(ResponseEntity.notFound().build());
+  }
+
+  @PostMapping(path="/{id}/cancel")
+  public Mono<ResponseEntity<OrderResponse>> cancelOrder(
+      @PathVariable("id") String id,
+      @RequestBody(required = false) CancelOrderRequest request,
+      Authentication auth) {
+    if (orderStateService == null) {
+      return Mono.just(ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build());
+    }
+    String reason = request != null ? request.getReason() : "Cancelado por el usuario";
+    return orderStateService.cancelOrder(id, reason, auth)
+        .map(this::toOrderResponse)
+        .map(ResponseEntity::ok)
         .defaultIfEmpty(ResponseEntity.notFound().build());
   }
 

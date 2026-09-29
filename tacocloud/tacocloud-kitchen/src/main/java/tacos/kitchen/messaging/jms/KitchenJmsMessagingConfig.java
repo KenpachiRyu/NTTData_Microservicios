@@ -12,7 +12,7 @@ import tacos.TacoOrder;
 
 @Profile({"jms-template", "jms-listener"})
 @Configuration
-public class MessagingConfig {
+public class KitchenJmsMessagingConfig {
 
   @Bean
   public MappingJackson2MessageConverter messageConverter() {

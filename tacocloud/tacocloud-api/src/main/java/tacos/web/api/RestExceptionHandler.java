@@ -102,13 +102,25 @@ public class RestExceptionHandler {
   @ExceptionHandler(BusinessRuleException.class)
   public ResponseEntity<ApiProblem> handleBusinessRuleException(BusinessRuleException ex, ServerWebExchange exchange) {
     HttpStatus status = HttpStatus.UNPROCESSABLE_ENTITY;
-    if (ex.getCode() != null && (ex.getCode().startsWith("INVALID_") || "BAD_REQUEST".equals(ex.getCode()))) {
+    if (ex.getCode() != null && ("INVALID_ORDER_STATE_TRANSITION".equals(ex.getCode()) || ex.getCode().contains("CONFLICT"))) {
+      status = HttpStatus.CONFLICT;
+    } else if (ex.getCode() != null && (ex.getCode().startsWith("INVALID_") || "BAD_REQUEST".equals(ex.getCode()))) {
       status = HttpStatus.BAD_REQUEST;
     }
 
+    String probType = "business-rule-violation";
+    String title = "Unprocessable Entity";
+    if (status == HttpStatus.CONFLICT) {
+      probType = "conflict";
+      title = "Conflict";
+    } else if (status == HttpStatus.BAD_REQUEST) {
+      probType = "bad-request";
+      title = "Bad Request";
+    }
+
     ApiProblem problem = ApiProblem.builder()
-        .type(URI.create("https://tacocloud.com/probs/" + (status == HttpStatus.BAD_REQUEST ? "bad-request" : "business-rule-violation")))
-        .title(status == HttpStatus.BAD_REQUEST ? "Bad Request" : "Unprocessable Entity")
+        .type(URI.create("https://tacocloud.com/probs/" + probType))
+        .title(title)
         .status(status.value())
         .detail(ex.getMessage())
         .instance(exchange.getRequest().getPath().value())

@@ -89,8 +89,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         .antMatchers(HttpMethod.POST, "/api/tacos").hasAnyRole("USER", "ADMIN")
         .antMatchers("/api/orders/**", "/api/users/me/**", "/api/payment-methods/**", "/api/coupons/**", "/api/tacos/validate").hasAnyRole("USER", "ADMIN")
         
-        // --- Cocina requiere KITCHEN ---
-        .antMatchers("/api/kitchen/**").hasRole("KITCHEN")
+        // --- Cocina requiere KITCHEN o ADMIN ---
+        .antMatchers("/api/kitchen/**").hasAnyRole("KITCHEN", "ADMIN")
         
         // --- DENY-BY-DEFAULT: cualquier otra ruta no listada se bloquea ---
         .anyRequest().denyAll()

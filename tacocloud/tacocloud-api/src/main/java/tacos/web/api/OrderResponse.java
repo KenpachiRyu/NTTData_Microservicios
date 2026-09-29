@@ -27,4 +27,12 @@ public class OrderResponse {
   private BigDecimal total;
   private String couponCode;
   private String currency = "USD";
+
+  // TC-25 / TC-26: Ciclo de vida y cocina
+  private Long version;
+  private tacos.OrderStatus status;
+  private String stationId;
+  private String cookId;
+  private Integer estimatedPrepMinutes;
+  private List<tacos.OrderStatusChange> statusHistory;
 }

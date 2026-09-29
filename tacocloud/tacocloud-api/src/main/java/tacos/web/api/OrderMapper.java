@@ -19,6 +19,7 @@ public class OrderMapper {
     order.setCcNumber(request.getPaymentToken());
     order.setTacos(request.getTacos());
     order.setCouponCode(request.getCouponCode());
+    order.setStatus(tacos.OrderStatus.CREATED);
     return order;
   }
 
@@ -42,6 +43,13 @@ public class OrderMapper {
     response.setTotal(order.getTotal());
     response.setCouponCode(order.getCouponCode());
     response.setCurrency(order.getCurrency() != null ? order.getCurrency() : "USD");
+
+    response.setVersion(order.getVersion());
+    response.setStatus(order.getStatus());
+    response.setStationId(order.getStationId());
+    response.setCookId(order.getCookId());
+    response.setEstimatedPrepMinutes(order.getEstimatedPrepMinutes());
+    response.setStatusHistory(order.getStatusHistory());
     return response;
   }
 }

@@ -19,7 +19,17 @@ public class TacoOrder implements Serializable {
 
   @Id
   private String id;
+
+  @org.springframework.data.annotation.Version
+  private Long version;
+
   private Date placedAt = new Date();
+
+  private OrderStatus status = OrderStatus.CREATED;
+  private String stationId;
+  private String cookId;
+  private Integer estimatedPrepMinutes;
+  private List<OrderStatusChange> statusHistory = new ArrayList<>();
 
   private User user;
 
@@ -83,6 +93,14 @@ public class TacoOrder implements Serializable {
 
   public void setCcCVV(String ccCVV) {
     // CVV se descarta estrictamente y nunca se almacena
+  }
+
+  public void recordStatusChange(OrderStatus from, OrderStatus to, String updatedBy, String source, String reason) {
+    this.status = to;
+    if (this.statusHistory == null) {
+      this.statusHistory = new ArrayList<>();
+    }
+    this.statusHistory.add(new OrderStatusChange(from, to, new Date(), updatedBy, source, reason));
   }
 
 }
