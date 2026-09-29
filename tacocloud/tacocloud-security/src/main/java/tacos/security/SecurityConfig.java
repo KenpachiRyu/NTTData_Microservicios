@@ -78,13 +78,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         // --- Catálogo público de solo lectura ---
         .antMatchers(HttpMethod.GET, "/api/ingredients/**", "/api/tacos/**").permitAll()
         
-        // --- Edición de catálogo requiere ADMIN ---
+        // --- Edición de catálogo y operaciones de administración requieren ADMIN ---
         .antMatchers(HttpMethod.POST, "/api/ingredients/**").hasRole("ADMIN")
         .antMatchers(HttpMethod.PUT, "/api/ingredients/**").hasRole("ADMIN")
         .antMatchers(HttpMethod.DELETE, "/api/ingredients/**").hasRole("ADMIN")
+        .antMatchers("/api/admin/**").hasRole("ADMIN")
         
-        // --- Pedidos: USER crea y consulta; ADMIN puede auditar ---
-        .antMatchers("/api/orders/**", "/api/users/me/**").hasAnyRole("USER", "ADMIN")
+        // --- Pedidos, cupones, validaciones y pagos: USER crea y consulta; ADMIN puede auditar ---
+        .antMatchers("/api/orders/**", "/api/users/me/**", "/api/payment-methods/**", "/api/coupons/**", "/api/tacos/validate").hasAnyRole("USER", "ADMIN")
         
         // --- Cocina requiere KITCHEN ---
         .antMatchers("/api/kitchen/**").hasRole("KITCHEN")

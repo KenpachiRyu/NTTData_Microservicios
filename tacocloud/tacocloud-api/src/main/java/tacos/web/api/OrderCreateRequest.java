@@ -1,9 +1,9 @@
 package tacos.web.api;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotEmpty;
 import lombok.Data;
 import tacos.Taco;
 
@@ -30,6 +30,17 @@ public class OrderCreateRequest {
   @NotBlank(message = "El token de pago es obligatorio")
   private String paymentToken;
 
-  @NotEmpty(message = "La orden debe contener al menos un taco")
+  // Soporte para tacos directos (compatibilidad) y líneas de pedido con cantidad (TC-14)
   private List<Taco> tacos = new ArrayList<>();
+  private List<OrderItemRequest> items = new ArrayList<>();
+
+  // Cupón opcional (TC-15)
+  private String couponCode;
+
+  // Campo enviado por el cliente que será estrictamente ignorado por el servidor (TC-14)
+  private BigDecimal clientCalculatedTotal;
+
+  public boolean hasItemsOrTacos() {
+    return (items != null && !items.isEmpty()) || (tacos != null && !tacos.isEmpty());
+  }
 }

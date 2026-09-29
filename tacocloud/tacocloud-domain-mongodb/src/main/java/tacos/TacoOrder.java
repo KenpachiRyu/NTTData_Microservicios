@@ -38,11 +38,20 @@ public class TacoOrder implements Serializable {
   private String cardExpiration;
 
   private BigDecimal total;
+  private BigDecimal subtotal;
+  private BigDecimal discountAmount;
+  private String couponCode;
+  private String currency = "USD";
 
   private List<Taco> tacos = new ArrayList<>();
+  private List<OrderItem> items = new ArrayList<>();
 
   public void addTaco(Taco design) {
     this.tacos.add(design);
+  }
+
+  public void addItem(OrderItem item) {
+    this.items.add(item);
   }
 
   // Métodos de compatibilidad seguros: no almacenan PAN ni CVV

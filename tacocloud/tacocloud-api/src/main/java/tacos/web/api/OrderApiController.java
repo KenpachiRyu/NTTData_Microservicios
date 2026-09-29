@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import tacos.Ingredient;
+import tacos.Taco;
 import tacos.TacoOrder;
 import tacos.data.IngredientRepository;
 import tacos.data.OrderRepository;
@@ -40,15 +41,35 @@ public class OrderApiController {
   private OrderMessagingService orderMessages;
   private EmailOrderService emailOrderService;
   private IngredientRepository ingredientRepo;
+  private PricingService pricingService;
+  private InventoryService inventoryService;
+  private tacos.physics.TacoPhysicsValidator physicsValidator;
+  private OrderMapper orderMapper;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  public OrderApiController(OrderRepository repo,
+                            OrderMessagingService orderMessages,
+                            EmailOrderService emailOrderService,
+                            IngredientRepository ingredientRepo,
+                            @org.springframework.beans.factory.annotation.Autowired(required = false) PricingService pricingService,
+                            @org.springframework.beans.factory.annotation.Autowired(required = false) InventoryService inventoryService,
+                            @org.springframework.beans.factory.annotation.Autowired(required = false) tacos.physics.TacoPhysicsValidator physicsValidator,
+                            @org.springframework.beans.factory.annotation.Autowired(required = false) OrderMapper orderMapper) {
+    this.repo = repo;
+    this.orderMessages = orderMessages;
+    this.emailOrderService = emailOrderService;
+    this.ingredientRepo = ingredientRepo;
+    this.pricingService = pricingService;
+    this.inventoryService = inventoryService;
+    this.physicsValidator = physicsValidator;
+    this.orderMapper = orderMapper != null ? orderMapper : new OrderMapper();
+  }
 
   public OrderApiController(OrderRepository repo,
                             OrderMessagingService orderMessages,
                             EmailOrderService emailOrderService,
                             IngredientRepository ingredientRepo) {
-    this.repo = repo;
-    this.orderMessages = orderMessages;
-    this.emailOrderService = emailOrderService;
-    this.ingredientRepo = ingredientRepo;
+    this(repo, orderMessages, emailOrderService, ingredientRepo, null, null, null, new OrderMapper());
   }
 
   @GetMapping(produces="application/json")
@@ -57,7 +78,7 @@ public class OrderApiController {
   }
 
   // =========================================================================
-  // TC-08 / TC-12 / TC-14: Crear orden calculando el total en el servidor
+  // TC-08 / TC-12 / TC-14 / TC-15 / TC-16 / TC-18: Crear orden completa
   // =========================================================================
   @PostMapping(consumes="application/json")
   @ResponseStatus(HttpStatus.CREATED)
@@ -65,13 +86,64 @@ public class OrderApiController {
     TacoOrder order = toDomainOrder(request);
     order.setPlacedAt(new Date());
 
-    // Obtener todos los IDs de los ingredientes incluidos en la orden
-    List<String> ingredientIds = request.getTacos().stream()
-        .flatMap(taco -> taco.getIngredients().stream())
-        .map(Ingredient::getId)
-        .collect(Collectors.toList());
+    if (pricingService != null) {
+      // TC-18: Validar física de tacos antes de procesar o reservar
+      List<Taco> tacosToValidate = (order.getItems() != null && !order.getItems().isEmpty())
+          ? order.getItems().stream().map(tacos.OrderItem::getTaco).collect(Collectors.toList())
+          : order.getTacos();
 
-    // TC-14: Consultar precios reales en la base de datos y calcular el total en el servidor
+      Mono<Void> validationMono = (physicsValidator != null && tacosToValidate != null && !tacosToValidate.isEmpty())
+          ? Flux.fromIterable(tacosToValidate)
+              .concatMap(taco -> physicsValidator.validateTaco(taco)
+                  .flatMap(report -> {
+                    if (!report.isValid()) {
+                      String detail = report.getViolations().isEmpty() ? "Regla física violada" : report.getViolations().get(0).getMessage();
+                      return Mono.error(new BusinessRuleException("TACO_PHYSICS_VIOLATION", "Diseño inválido para '" + taco.getName() + "': " + detail));
+                    }
+                    return Mono.empty();
+                  })
+              )
+              .then()
+          : Mono.empty();
+
+      return validationMono
+          // TC-14 / TC-15: Calcular precios de servidor y cupones
+          .then(pricingService.priceOrder(order, request.getCouponCode()))
+          .flatMap(pricedOrder -> {
+            // TC-16: Calcular ingredientes y reservar inventario atómicamente
+            java.util.Map<String, Integer> demand = new java.util.HashMap<>();
+            if (pricedOrder.getItems() != null) {
+              for (tacos.OrderItem item : pricedOrder.getItems()) {
+                if (item.getTaco() != null && item.getTaco().getIngredients() != null) {
+                  for (Ingredient ing : item.getTaco().getIngredients()) {
+                    if (ing != null && ing.getId() != null) {
+                      demand.merge(ing.getId(), item.getQuantity(), Integer::sum);
+                    }
+                  }
+                }
+              }
+            }
+
+            Mono<Void> reserveMono = (inventoryService != null && !demand.isEmpty())
+                ? inventoryService.reserve(pricedOrder.getId(), null, demand).then()
+                : Mono.empty();
+
+            // TC-07: Guardar y luego publicar (Save-then-Send)
+            return reserveMono.then(repo.save(pricedOrder));
+          })
+          .doOnNext(orderMessages::sendOrder)
+          .map(this::toOrderResponse);
+    }
+
+    // Fallback reactivo si pricingService no está inyectado (por ejemplo en tests unitarios antiguos)
+    List<String> ingredientIds = (request.getTacos() != null)
+        ? request.getTacos().stream()
+            .flatMap(taco -> taco.getIngredients() != null ? taco.getIngredients().stream() : java.util.stream.Stream.empty())
+            .map(Ingredient::getId)
+            .filter(java.util.Objects::nonNull)
+            .collect(Collectors.toList())
+        : java.util.Collections.emptyList();
+
     return ingredientRepo.findAllById(ingredientIds)
         .collectList()
         .flatMap(ingredients -> {
@@ -79,12 +151,10 @@ public class OrderApiController {
               .map(ing -> ing.getUnitPrice() != null ? ing.getUnitPrice() : BigDecimal.ZERO)
               .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-          // Asignar el total calculado en el servidor antes de guardar
           order.setTotal(calculatedTotal);
-          orderMessages.sendOrder(order);
-
           return repo.save(order);
         })
+        .doOnNext(orderMessages::sendOrder)
         .map(this::toOrderResponse);
   }
 
@@ -210,29 +280,19 @@ public class OrderApiController {
   // Mappers auxiliares para DTOs
   // =========================================================================
   private TacoOrder toDomainOrder(OrderCreateRequest req) {
-    TacoOrder order = new TacoOrder();
-    order.setDeliveryName(req.getDeliveryName());
-    order.setDeliveryStreet(req.getDeliveryStreet());
-    order.setDeliveryCity(req.getDeliveryCity());
-    order.setDeliveryState(req.getDeliveryState());
-    order.setDeliveryZip(req.getDeliveryZip());
-    order.setCcNumber(req.getPaymentToken()); 
-    order.setTacos(req.getTacos());
+    TacoOrder order = orderMapper.toDomain(req);
+    if (req.getItems() != null && !req.getItems().isEmpty()) {
+      List<tacos.OrderItem> items = new java.util.ArrayList<>();
+      for (OrderItemRequest itemReq : req.getItems()) {
+        items.add(new tacos.OrderItem(itemReq.getTaco(), itemReq.getQuantity()));
+      }
+      order.setItems(items);
+    }
     return order;
   }
 
   private OrderResponse toOrderResponse(TacoOrder order) {
-    OrderResponse res = new OrderResponse();
-    res.setId(order.getId());
-    res.setPlacedAt(order.getPlacedAt());
-    res.setDeliveryName(order.getDeliveryName());
-    res.setDeliveryStreet(order.getDeliveryStreet());
-    res.setDeliveryCity(order.getDeliveryCity());
-    res.setDeliveryState(order.getDeliveryState());
-    res.setDeliveryZip(order.getDeliveryZip());
-    res.setPaymentToken(order.getCcNumber());
-    res.setTacos(order.getTacos());
-    return res;
+    return orderMapper.toResponse(order);
   }
 
   @ExceptionHandler({

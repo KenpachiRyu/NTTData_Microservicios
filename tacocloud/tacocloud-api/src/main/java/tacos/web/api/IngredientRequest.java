@@ -1,5 +1,7 @@
 package tacos.web.api;
 
+import java.math.BigDecimal;
+import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -20,4 +22,10 @@ public class IngredientRequest {
   @NotNull(message = "El tipo de ingrediente es obligatorio")
   private Type type;
 
+  @DecimalMin(value = "0.0", inclusive = true, message = "El precio unitario no puede ser negativo")
+  private BigDecimal unitPrice;
+
+  public IngredientRequest(String id, String name, Type type) {
+    this(id, name, type, BigDecimal.ZERO);
+  }
 }

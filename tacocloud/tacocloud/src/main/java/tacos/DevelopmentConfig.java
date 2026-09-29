@@ -1,6 +1,9 @@
 package tacos;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -21,23 +24,31 @@ public class DevelopmentConfig {
   @Bean
   public CommandLineRunner dataLoader(IngredientRepository repo,
         UserRepository userRepo, PasswordEncoder encoder, TacoRepository tacoRepo,
-        PaymentMethodRepository paymentMethodRepo) { // user repo for ease of testing with a built-in user
+        PaymentMethodRepository paymentMethodRepo) {
     
     return new CommandLineRunner() {
       @Override
       public void run(String... args) throws Exception {
-        Ingredient flourTortilla = saveAnIngredient("FLTO", "Flour Tortilla", Type.WRAP);
-        Ingredient cornTortilla = saveAnIngredient("COTO", "Corn Tortilla", Type.WRAP);
-        Ingredient groundBeef = saveAnIngredient("GRBF", "Ground Beef", Type.PROTEIN);
-        Ingredient carnitas = saveAnIngredient("CARN", "Carnitas", Type.PROTEIN);
-        Ingredient tomatoes = saveAnIngredient("TMTO", "Diced Tomatoes", Type.VEGGIES);
-        Ingredient lettuce = saveAnIngredient("LETC", "Lettuce", Type.VEGGIES);
-        Ingredient cheddar = saveAnIngredient("CHED", "Cheddar", Type.CHEESE);
-        Ingredient jack = saveAnIngredient("JACK", "Monterrey Jack", Type.CHEESE);
-        Ingredient salsa = saveAnIngredient("SLSA", "Salsa", Type.SAUCE);
-        Ingredient sourCream = saveAnIngredient("SRCR", "Sour Cream", Type.SAUCE);
-        
-//        UserUDT u = new UserUDT(username, fullname, phoneNumber)
+        Ingredient flourTortilla = saveIngredient("FLTO", "Flour Tortilla", Type.WRAP, "0.50", 100, 10,
+            setOf(DietaryTag.VEGAN, DietaryTag.VEGETARIAN), setOf(Allergen.GLUTEN), SpiceLevel.NONE);
+        Ingredient cornTortilla = saveIngredient("COTO", "Corn Tortilla", Type.WRAP, "0.60", 100, 10,
+            setOf(DietaryTag.VEGAN, DietaryTag.VEGETARIAN, DietaryTag.GLUTEN_FREE), setOf(), SpiceLevel.NONE);
+        Ingredient groundBeef = saveIngredient("GRBF", "Ground Beef", Type.PROTEIN, "1.50", 100, 10,
+            setOf(), setOf(), SpiceLevel.NONE);
+        Ingredient carnitas = saveIngredient("CARN", "Carnitas", Type.PROTEIN, "1.75", 100, 10,
+            setOf(), setOf(), SpiceLevel.NONE);
+        Ingredient tomatoes = saveIngredient("TMTO", "Diced Tomatoes", Type.VEGGIES, "0.30", 100, 10,
+            setOf(DietaryTag.VEGAN, DietaryTag.VEGETARIAN, DietaryTag.GLUTEN_FREE), setOf(), SpiceLevel.NONE);
+        Ingredient lettuce = saveIngredient("LETC", "Lettuce", Type.VEGGIES, "0.25", 100, 10,
+            setOf(DietaryTag.VEGAN, DietaryTag.VEGETARIAN, DietaryTag.GLUTEN_FREE), setOf(), SpiceLevel.NONE);
+        Ingredient cheddar = saveIngredient("CHED", "Cheddar", Type.CHEESE, "0.50", 100, 10,
+            setOf(DietaryTag.VEGETARIAN, DietaryTag.GLUTEN_FREE), setOf(Allergen.DAIRY), SpiceLevel.NONE);
+        Ingredient jack = saveIngredient("JACK", "Monterrey Jack", Type.CHEESE, "0.50", 100, 10,
+            setOf(DietaryTag.VEGETARIAN, DietaryTag.GLUTEN_FREE), setOf(Allergen.DAIRY), SpiceLevel.NONE);
+        Ingredient salsa = saveIngredient("SLSA", "Salsa", Type.SAUCE, "0.40", 100, 10,
+            setOf(DietaryTag.VEGAN, DietaryTag.VEGETARIAN, DietaryTag.GLUTEN_FREE), setOf(), SpiceLevel.MEDIUM);
+        Ingredient sourCream = saveIngredient("SRCR", "Sour Cream", Type.SAUCE, "0.35", 100, 10,
+            setOf(DietaryTag.VEGETARIAN, DietaryTag.GLUTEN_FREE), setOf(Allergen.DAIRY), SpiceLevel.NONE);
         
         userRepo.save(new User("habuma", encoder.encode("password"), 
               "Craig Walls", "123 North Street", "Cross Roads", "TX", 
@@ -61,17 +72,27 @@ public class DevelopmentConfig {
         Taco taco3 = new Taco();
         taco3.setId("TACO3");
         taco3.setName("Veg-Out");
-        taco3.setIngredients(Arrays.asList(flourTortilla, cornTortilla, tomatoes, lettuce, salsa));
+        taco3.setIngredients(Arrays.asList(flourTortilla, tomatoes, lettuce, salsa));
         tacoRepo.save(taco3).subscribe();
-
       }
 
-      private Ingredient saveAnIngredient(String id, String name, Type type) {
-        Ingredient ingredient = new Ingredient(id, name, type);
+      @SafeVarargs
+      private final <T> Set<T> setOf(T... elements) {
+        return new HashSet<>(Arrays.asList(elements));
+      }
+
+      private Ingredient saveIngredient(String id, String name, Type type, String price, int stock, int reorder,
+                                       Set<DietaryTag> tags, Set<Allergen> allergens, SpiceLevel spice) {
+        Ingredient ingredient = new Ingredient(id, name, type, new BigDecimal(price));
+        ingredient.setAvailable(true);
+        ingredient.setStockOnHand(stock);
+        ingredient.setReorderLevel(reorder);
+        ingredient.setDietaryTags(tags);
+        ingredient.setAllergens(allergens);
+        ingredient.setSpiceLevel(spice);
         repo.save(ingredient).subscribe();
         return ingredient;
       }
     };
   }
-  
 }

@@ -18,6 +18,7 @@ public class OrderMapper {
     order.setDeliveryZip(request.getDeliveryZip());
     order.setCcNumber(request.getPaymentToken());
     order.setTacos(request.getTacos());
+    order.setCouponCode(request.getCouponCode());
     return order;
   }
 
@@ -35,6 +36,12 @@ public class OrderMapper {
     response.setDeliveryZip(order.getDeliveryZip());
     response.setPaymentToken(order.getCcNumber());
     response.setTacos(order.getTacos());
+    response.setItems(order.getItems());
+    response.setSubtotal(order.getSubtotal());
+    response.setDiscountAmount(order.getDiscountAmount());
+    response.setTotal(order.getTotal());
+    response.setCouponCode(order.getCouponCode());
+    response.setCurrency(order.getCurrency() != null ? order.getCurrency() : "USD");
     return response;
   }
 }

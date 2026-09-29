@@ -82,6 +82,23 @@ public class RestExceptionHandler {
         .body(problem);
   }
 
+  @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
+  public ResponseEntity<ApiProblem> handleOptimisticLockingException(org.springframework.dao.OptimisticLockingFailureException ex, ServerWebExchange exchange) {
+    ApiProblem problem = ApiProblem.builder()
+        .type(URI.create("https://tacocloud.com/probs/optimistic-lock-conflict"))
+        .title("Version Conflict")
+        .status(HttpStatus.CONFLICT.value())
+        .detail("El recurso fue modificado concurrentemente por otra transacción. Intente de nuevo.")
+        .instance(exchange.getRequest().getPath().value())
+        .code("VERSION_CONFLICT")
+        .correlationId(UUID.randomUUID().toString())
+        .build();
+
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .contentType(PROBLEM_JSON)
+        .body(problem);
+  }
+
   @ExceptionHandler(BusinessRuleException.class)
   public ResponseEntity<ApiProblem> handleBusinessRuleException(BusinessRuleException ex, ServerWebExchange exchange) {
     ApiProblem problem = ApiProblem.builder()
