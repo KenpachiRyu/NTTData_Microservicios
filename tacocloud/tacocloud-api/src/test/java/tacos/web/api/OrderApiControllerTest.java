@@ -1,9 +1,12 @@
 package tacos.web.api;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import org.mockito.InOrder;
 
 import java.math.BigDecimal;
 import java.security.Principal;
@@ -313,5 +316,81 @@ public class OrderApiControllerTest {
         .verifyComplete();
 
     verify(orderRepo).delete(existing);
+  }
+
+  // =========================================================================
+  // TC-07 Tests: Guardar antes de enviar (save-then-send)
+  // =========================================================================
+
+  @Test
+  public void shouldSaveBeforeSendingOrderWhenPostOrderFromEmail() {
+    EmailOrder emailOrder = new EmailOrder();
+    emailOrder.setEmail("alice@example.com");
+
+    TacoOrder unsavedOrder = new TacoOrder();
+    unsavedOrder.setDeliveryName("Alice");
+
+    TacoOrder savedOrder = new TacoOrder();
+    savedOrder.setId("order-persisted-456");
+    savedOrder.setDeliveryName("Alice");
+
+    when(emailOrderService.convertEmailOrderToDomainOrder(any())).thenReturn(Mono.just(unsavedOrder));
+    when(orderRepo.save(unsavedOrder)).thenReturn(Mono.just(savedOrder));
+
+    testClient.post()
+        .uri("/api/orders/fromEmail")
+        .contentType(MediaType.APPLICATION_JSON)
+        .bodyValue(emailOrder)
+        .exchange()
+        .expectStatus().isCreated()
+        .expectBody(OrderResponse.class)
+        .value(res -> {
+          org.junit.jupiter.api.Assertions.assertEquals("order-persisted-456", res.getId());
+        });
+
+    InOrder inOrder = inOrder(orderRepo, messagingService);
+    inOrder.verify(orderRepo).save(unsavedOrder);
+    inOrder.verify(messagingService).sendOrder(savedOrder);
+  }
+
+  @Test
+  public void shouldNotSendMessageWhenSaveFailsInPostOrderFromEmail() {
+    EmailOrder emailOrder = new EmailOrder();
+    emailOrder.setEmail("alice@example.com");
+
+    TacoOrder unsavedOrder = new TacoOrder();
+    unsavedOrder.setDeliveryName("Alice");
+
+    when(emailOrderService.convertEmailOrderToDomainOrder(any())).thenReturn(Mono.just(unsavedOrder));
+    when(orderRepo.save(unsavedOrder)).thenReturn(Mono.error(new RuntimeException("MongoDB connection timeout")));
+
+    testClient.post()
+        .uri("/api/orders/fromEmail")
+        .contentType(MediaType.APPLICATION_JSON)
+        .bodyValue(emailOrder)
+        .exchange()
+        .expectStatus().is5xxServerError();
+
+    verify(orderRepo).save(unsavedOrder);
+    verify(messagingService, never()).sendOrder(any());
+  }
+
+  @Test
+  public void shouldNotSaveNorSendWhenConversionFailsInPostOrderFromEmail() {
+    EmailOrder emailOrder = new EmailOrder();
+    emailOrder.setEmail("invalid@example.com");
+
+    when(emailOrderService.convertEmailOrderToDomainOrder(any()))
+        .thenReturn(Mono.error(new UserNotFoundException("invalid@example.com")));
+
+    testClient.post()
+        .uri("/api/orders/fromEmail")
+        .contentType(MediaType.APPLICATION_JSON)
+        .bodyValue(emailOrder)
+        .exchange()
+        .expectStatus().is5xxServerError();
+
+    verify(orderRepo, never()).save(any());
+    verify(messagingService, never()).sendOrder(any());
   }
 }

@@ -2,6 +2,7 @@ package tacos.web.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -86,8 +87,8 @@ public class EmailOrderServiceTest {
           assertEquals("Dallas", order.getDeliveryCity());
           assertEquals("TX", order.getDeliveryState());
           assertEquals("75001", order.getDeliveryZip());
-          assertEquals("4111111111111111", order.getCcNumber());
-          assertEquals("123", order.getCcCVV());
+          assertEquals(testPaymentMethod.getPaymentToken(), order.getCcNumber());
+          assertNull(order.getCcCVV());
           assertEquals("12/28", order.getCcExpiration());
           assertNotNull(order.getPlacedAt());
 

@@ -89,16 +89,14 @@ public class OrderApiController {
   }
 
   // =========================================================================
-  // TC-07: Una sola suscripción para guardar y publicar (8 pts)
+  // TC-07: Guardar antes de enviar - Una sola suscripción reactiva (8 pts)
   // =========================================================================
   @PostMapping(path="fromEmail", consumes="application/json")
   @ResponseStatus(HttpStatus.CREATED)
   public Mono<OrderResponse> postOrderFromEmail(@RequestBody Mono<EmailOrder> emailOrder) {
     return emailOrderService.convertEmailOrderToDomainOrder(emailOrder)
-        .flatMap(order -> {
-          orderMessages.sendOrder(order);
-          return repo.save(order);
-        })
+        .flatMap(repo::save)
+        .doOnNext(orderMessages::sendOrder)
         .map(this::toOrderResponse);
   }
 
