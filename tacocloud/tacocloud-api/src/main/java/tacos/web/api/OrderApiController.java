@@ -45,6 +45,7 @@ public class OrderApiController {
   private InventoryService inventoryService;
   private tacos.physics.TacoPhysicsValidator physicsValidator;
   private OrderMapper orderMapper;
+  private ReorderService reorderService;
 
   @org.springframework.beans.factory.annotation.Autowired
   public OrderApiController(OrderRepository repo,
@@ -54,7 +55,8 @@ public class OrderApiController {
                             @org.springframework.beans.factory.annotation.Autowired(required = false) PricingService pricingService,
                             @org.springframework.beans.factory.annotation.Autowired(required = false) InventoryService inventoryService,
                             @org.springframework.beans.factory.annotation.Autowired(required = false) tacos.physics.TacoPhysicsValidator physicsValidator,
-                            @org.springframework.beans.factory.annotation.Autowired(required = false) OrderMapper orderMapper) {
+                            @org.springframework.beans.factory.annotation.Autowired(required = false) OrderMapper orderMapper,
+                            @org.springframework.beans.factory.annotation.Autowired(required = false) ReorderService reorderService) {
     this.repo = repo;
     this.orderMessages = orderMessages;
     this.emailOrderService = emailOrderService;
@@ -63,6 +65,18 @@ public class OrderApiController {
     this.inventoryService = inventoryService;
     this.physicsValidator = physicsValidator;
     this.orderMapper = orderMapper != null ? orderMapper : new OrderMapper();
+    this.reorderService = reorderService;
+  }
+
+  public OrderApiController(OrderRepository repo,
+                            OrderMessagingService orderMessages,
+                            EmailOrderService emailOrderService,
+                            IngredientRepository ingredientRepo,
+                            PricingService pricingService,
+                            InventoryService inventoryService,
+                            tacos.physics.TacoPhysicsValidator physicsValidator,
+                            OrderMapper orderMapper) {
+    this(repo, orderMessages, emailOrderService, ingredientRepo, pricingService, inventoryService, physicsValidator, orderMapper, null);
   }
 
   public OrderApiController(OrderRepository repo,
@@ -274,6 +288,41 @@ public class OrderApiController {
               .then(Mono.just(new ResponseEntity<Void>(HttpStatus.NO_CONTENT)));
         })
         .defaultIfEmpty(new ResponseEntity<Void>(HttpStatus.NOT_FOUND));
+  }
+
+  // =========================================================================
+  // TC-24: Reordenar una compra anterior con reglas actuales
+  // =========================================================================
+  @PostMapping("/{id}/reorder")
+  public Mono<ResponseEntity<ReorderResponse>> reorderOrder(
+      @PathVariable("id") String id,
+      @RequestBody(required = false) ReorderRequest request,
+      Principal principal) {
+
+    if (principal == null) {
+      return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    if (reorderService == null) {
+      return Mono.just(ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build());
+    }
+
+    return reorderService.reorder(id, principal.getName(), request != null ? request : new ReorderRequest())
+        .map(response -> {
+          if (!response.isConfirmed()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+          }
+          return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        })
+        .onErrorResume(BusinessRuleException.class, ex -> {
+          if ("FORBIDDEN_REORDER".equals(ex.getErrorCode())) {
+            return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ReorderResponse(false, null, null, null, null, ex.getMessage())));
+          }
+          return Mono.just(ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+              .body(new ReorderResponse(false, null, null, null, null, ex.getMessage())));
+        })
+        .defaultIfEmpty(ResponseEntity.notFound().build());
   }
 
   // =========================================================================

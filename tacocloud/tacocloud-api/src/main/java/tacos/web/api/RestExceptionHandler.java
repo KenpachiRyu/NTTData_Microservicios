@@ -101,17 +101,22 @@ public class RestExceptionHandler {
 
   @ExceptionHandler(BusinessRuleException.class)
   public ResponseEntity<ApiProblem> handleBusinessRuleException(BusinessRuleException ex, ServerWebExchange exchange) {
+    HttpStatus status = HttpStatus.UNPROCESSABLE_ENTITY;
+    if (ex.getCode() != null && (ex.getCode().startsWith("INVALID_") || "BAD_REQUEST".equals(ex.getCode()))) {
+      status = HttpStatus.BAD_REQUEST;
+    }
+
     ApiProblem problem = ApiProblem.builder()
-        .type(URI.create("https://tacocloud.com/probs/business-rule-violation"))
-        .title("Unprocessable Entity")
-        .status(HttpStatus.UNPROCESSABLE_ENTITY.value())
+        .type(URI.create("https://tacocloud.com/probs/" + (status == HttpStatus.BAD_REQUEST ? "bad-request" : "business-rule-violation")))
+        .title(status == HttpStatus.BAD_REQUEST ? "Bad Request" : "Unprocessable Entity")
+        .status(status.value())
         .detail(ex.getMessage())
         .instance(exchange.getRequest().getPath().value())
         .code(ex.getCode())
         .correlationId(UUID.randomUUID().toString())
         .build();
 
-    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+    return ResponseEntity.status(status)
         .contentType(PROBLEM_JSON)
         .body(problem);
   }

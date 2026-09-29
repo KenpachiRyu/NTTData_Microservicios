@@ -19,6 +19,10 @@ public class ValidationReport {
     return new ValidationReport(true, tacoName, new ArrayList<>());
   }
 
+  public static ValidationReport valid() {
+    return new ValidationReport(true, "valid", new ArrayList<>());
+  }
+
   public static ValidationReport failed(String tacoName, List<TacoViolation> violations) {
     return new ValidationReport(false, tacoName, violations);
   }

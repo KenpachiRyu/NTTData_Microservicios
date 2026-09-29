@@ -84,7 +84,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         .antMatchers(HttpMethod.DELETE, "/api/ingredients/**").hasRole("ADMIN")
         .antMatchers("/api/admin/**").hasRole("ADMIN")
         
-        // --- Pedidos, cupones, validaciones y pagos: USER crea y consulta; ADMIN puede auditar ---
+        // --- Pedidos, cupones, validaciones, calificaciones y pagos: USER crea y consulta; ADMIN puede auditar ---
+        .antMatchers(HttpMethod.PUT, "/api/tacos/*/rating").hasAnyRole("USER", "ADMIN")
+        .antMatchers(HttpMethod.POST, "/api/tacos").hasAnyRole("USER", "ADMIN")
         .antMatchers("/api/orders/**", "/api/users/me/**", "/api/payment-methods/**", "/api/coupons/**", "/api/tacos/validate").hasAnyRole("USER", "ADMIN")
         
         // --- Cocina requiere KITCHEN ---
