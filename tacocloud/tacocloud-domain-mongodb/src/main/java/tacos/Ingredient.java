@@ -46,6 +46,11 @@ public class Ingredient {
   private Set<Allergen> allergens = new HashSet<>();
   private SpiceLevel spiceLevel = SpiceLevel.NONE;
 
+  @com.fasterxml.jackson.annotation.JsonCreator(mode = com.fasterxml.jackson.annotation.JsonCreator.Mode.DELEGATING)
+  public Ingredient(String id) {
+    this(id, null, null, BigDecimal.ZERO);
+  }
+
   public Ingredient(String id, String name, Type type) {
     this(id, name, type, BigDecimal.ZERO);
   }

@@ -22,7 +22,7 @@ import tacos.physics.TacoPhysicsValidator;
 import tacos.physics.ValidationReport;
 
 @RestController
-@RequestMapping(path = "/api/tacos", produces = "application/json")
+@RequestMapping(path = {"/api/v1/tacos", "/api/tacos"}, produces = "application/json")
 @CrossOrigin(origins = "http://localhost:8080")
 public class TacoController {
 
@@ -92,7 +92,7 @@ public class TacoController {
   // =========================================================================
   // TC-20: Taco del día determinista
   // =========================================================================
-  @GetMapping("/today")
+  @GetMapping({"/today", "/taco-of-the-day"})
   public Mono<ResponseEntity<TacoOfTheDayResponse>> getTacoOfTheDay() {
     if (tacoOfTheDayService == null) {
       return Mono.just(ResponseEntity.notFound().build());

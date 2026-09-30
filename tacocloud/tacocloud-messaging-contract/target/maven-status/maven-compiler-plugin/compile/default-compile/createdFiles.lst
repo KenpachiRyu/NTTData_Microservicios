@@ -1,8 +1,0 @@
-tacos\messaging\event\OrderEventTaco$OrderEventTacoBuilder.class
-tacos\messaging\event\OrderEventTaco.class
-tacos\messaging\event\OrderEvent$OrderEventBuilder.class
-tacos\messaging\event\OrderEventPayload$OrderEventPayloadBuilder.class
-tacos\messaging\event\OrderEvent.class
-tacos\messaging\OrderMessagingService.class
-tacos\messaging\event\OrderEventPayload.class
-tacos\messaging\event\OrderEventType.class

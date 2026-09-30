@@ -17,7 +17,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping(path="/api/kitchen", produces="application/json")
+@RequestMapping(path={"/api/v1/kitchen", "/api/kitchen"}, produces="application/json")
 @CrossOrigin(origins="*")
 @RequiredArgsConstructor
 public class KitchenApiController {

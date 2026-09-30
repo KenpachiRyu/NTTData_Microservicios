@@ -19,7 +19,7 @@ import tacos.Taco;
 import tacos.TacoFavorite;
 
 @RestController
-@RequestMapping(path = "/api/users/me/favorites", produces = "application/json")
+@RequestMapping(path = {"/api/v1/users/me/favorites", "/api/users/me/favorites", "/api/v1/users/favorites", "/api/users/favorites"}, produces = "application/json")
 @CrossOrigin(origins = "*")
 public class UserFavoritesController {
 
@@ -28,6 +28,23 @@ public class UserFavoritesController {
   @Autowired
   public UserFavoritesController(FavoriteService favoriteService) {
     this.favoriteService = favoriteService;
+  }
+
+  @org.springframework.web.bind.annotation.PostMapping(consumes = "application/json")
+  public Mono<ResponseEntity<TacoFavorite>> addFavoriteByBody(
+      @org.springframework.web.bind.annotation.RequestBody java.util.Map<String, String> body,
+      Principal principal,
+      org.springframework.security.core.Authentication auth) {
+    String username = principal != null ? principal.getName() : (auth != null ? auth.getName() : null);
+    if (username == null) {
+      return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+    String tacoId = body != null ? body.get("tacoId") : null;
+    if (tacoId == null || tacoId.trim().isEmpty()) {
+      return Mono.just(ResponseEntity.badRequest().build());
+    }
+    return favoriteService.addFavorite(username, tacoId)
+        .map(ResponseEntity::ok);
   }
 
   @PutMapping("/{tacoId}")

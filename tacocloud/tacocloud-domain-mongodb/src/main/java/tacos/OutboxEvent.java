@@ -28,6 +28,7 @@ public class OutboxEvent implements Serializable {
   private String id = UUID.randomUUID().toString();
 
   private String eventId;
+  private String correlationId;
   private String aggregateType;
   private String aggregateId;
   private String eventType;

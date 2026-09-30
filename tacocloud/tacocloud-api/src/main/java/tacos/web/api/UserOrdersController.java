@@ -25,7 +25,7 @@ import tacos.data.OrderRepository;
 import tacos.data.UserRepository;
 
 @RestController
-@RequestMapping(path = "/api/users/me/orders", produces = "application/json")
+@RequestMapping(path = {"/api/v1/users/me/orders", "/api/users/me/orders"}, produces = "application/json")
 @CrossOrigin(origins = "*")
 public class UserOrdersController {
 

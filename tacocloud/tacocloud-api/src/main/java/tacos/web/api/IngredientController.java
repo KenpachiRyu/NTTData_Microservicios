@@ -24,7 +24,7 @@ import tacos.Ingredient;
 import tacos.data.IngredientRepository;
 
 @RestController
-@RequestMapping(path="/api/ingredients", produces="application/json")
+@RequestMapping(path={"/api/v1/ingredients", "/api/ingredients"}, produces="application/json")
 @CrossOrigin(origins="*")
 public class IngredientController {
 
@@ -50,31 +50,53 @@ public class IngredientController {
     if (ingredient.getId() != null && !ingredient.getId().equals(id)) {
       return Mono.just(new ResponseEntity<>(HttpStatus.BAD_REQUEST));
     }
+    ingredient.setId(id);
     return repo.findById(id)
-        .flatMap(existing -> repo.save(ingredient))
+        .flatMap(existing -> {
+          if (existing.getVersion() != null && ingredient.getVersion() == null) {
+            ingredient.setVersion(existing.getVersion());
+          }
+          if (existing.getStockOnHand() != null && (ingredient.getStockOnHand() == null || ingredient.getStockOnHand() == 0)) {
+            ingredient.setStockOnHand(existing.getStockOnHand());
+          }
+          if (existing.getReorderLevel() != null && (ingredient.getReorderLevel() == null || ingredient.getReorderLevel() == 0)) {
+            ingredient.setReorderLevel(existing.getReorderLevel());
+          }
+          if (ingredient.getAvailable() == null && existing.getAvailable() != null) {
+            ingredient.setAvailable(existing.getAvailable());
+          }
+          if ((ingredient.getDietaryTags() == null || ingredient.getDietaryTags().isEmpty()) && existing.getDietaryTags() != null) {
+            ingredient.setDietaryTags(existing.getDietaryTags());
+          }
+          if ((ingredient.getAllergens() == null || ingredient.getAllergens().isEmpty()) && existing.getAllergens() != null) {
+            ingredient.setAllergens(existing.getAllergens());
+          }
+          if (ingredient.getSpiceLevel() == null && existing.getSpiceLevel() != null) {
+            ingredient.setSpiceLevel(existing.getSpiceLevel());
+          }
+          return repo.save(ingredient);
+        })
         .map(saved -> new ResponseEntity<>(saved, HttpStatus.OK))
         .defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND));
   }
 
   @PostMapping(consumes="application/json")
   public Mono<ResponseEntity<Ingredient>> postIngredient(
-      @RequestBody Mono<Ingredient> ingredientMono,
-      ServerHttpRequest request) {
-    return ingredientMono
-        .flatMap(ingredient -> {
-          if (ingredient.getName() == null || ingredient.getName().trim().isEmpty() || ingredient.getType() == null) {
-            return Mono.just(new ResponseEntity<Ingredient>(HttpStatus.BAD_REQUEST));
+      @RequestBody Ingredient ingredient,
+      UriComponentsBuilder ucb) {
+    if (ingredient == null || ingredient.getName() == null || ingredient.getName().trim().isEmpty() || ingredient.getType() == null) {
+      return Mono.just(new ResponseEntity<Ingredient>(HttpStatus.BAD_REQUEST));
+    }
+    return repo.save(ingredient)
+        .map(saved -> {
+          URI location;
+          if (ucb != null && ucb.build().getHost() != null) {
+            location = ucb.path("/api/ingredients/" + saved.getId()).build().toUri();
+          } else {
+            location = URI.create("/api/ingredients/" + saved.getId());
           }
-          return repo.save(ingredient)
-              .map(saved -> {
-                URI location = UriComponentsBuilder.fromHttpRequest(request)
-                    .pathSegment(saved.getId())
-                    .build()
-                    .toUri();
-                return ResponseEntity.created(location).body(saved);
-              });
-        })
-        .defaultIfEmpty(new ResponseEntity<>(HttpStatus.BAD_REQUEST));
+          return ResponseEntity.created(location).body(saved);
+        });
   }
 
   @DeleteMapping("/{id}")

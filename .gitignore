@@ -1,0 +1,16 @@
+﻿target/
+**/target/
+*.class
+*.jar
+*.war
+*.log
+*.dump
+**/surefire-reports/
+*.http
+retos_raw.txt
+.vscode/
+.idea/
+*.iml
+.project
+.settings/
+.classpath

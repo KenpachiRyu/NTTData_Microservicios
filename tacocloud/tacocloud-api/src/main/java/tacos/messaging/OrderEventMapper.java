@@ -31,6 +31,10 @@ public class OrderEventMapper {
   }
 
   public static OrderEvent toOrderEvent(TacoOrder order, OrderEventType type) {
+    return toOrderEvent(order, type, null);
+  }
+
+  public static OrderEvent toOrderEvent(TacoOrder order, OrderEventType type, String correlationId) {
     if (order == null) return null;
 
     List<OrderEventTaco> tacoPayloads = new ArrayList<>();
@@ -62,12 +66,16 @@ public class OrderEventMapper {
         .tacos(tacoPayloads)
         .build();
 
+    String resolvedCorrelationId = (correlationId != null && !correlationId.trim().isEmpty())
+        ? correlationId
+        : UUID.randomUUID().toString();
+
     return OrderEvent.builder()
         .eventId(UUID.randomUUID().toString())
         .eventType(type)
         .version("1.0")
         .occurredAt(new Date())
-        .correlationId(UUID.randomUUID().toString())
+        .correlationId(resolvedCorrelationId)
         .payload(payload)
         .build();
   }

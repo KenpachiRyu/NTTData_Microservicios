@@ -21,8 +21,10 @@ taco:
 # tag::springBootAdminCreds[]
 # tag::springBootAdminUri[]
 spring:
-# end::springBootAdminUri[]
-# end::springBootAdminCreds[]
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDetailsServiceAutoConfiguration
   application:
     name: taco-cloud
   data:
@@ -73,6 +75,8 @@ management:
   endpoint:
     health:
       show-details: always
+    prometheus:
+      enabled: true
 #end::healthShowDetails[]
 #tag::infoGitModeFull[]
   info:

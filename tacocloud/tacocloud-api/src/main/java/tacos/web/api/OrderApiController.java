@@ -33,7 +33,7 @@ import tacos.data.OrderRepository;
 import tacos.messaging.OrderMessagingService;
 
 @RestController
-@RequestMapping(path="/api/orders", produces="application/json")
+@RequestMapping(path={"/api/v1/orders", "/api/orders"}, produces="application/json")
 @CrossOrigin(origins="*")
 public class OrderApiController {
 
@@ -49,6 +49,7 @@ public class OrderApiController {
   private OrderStateService orderStateService;
   private tacos.messaging.outbox.OutboxService outboxService;
   private tacos.messaging.outbox.OutboxDispatcher outboxDispatcher;
+  private tacos.idempotency.IdempotencyService idempotencyService;
 
   @org.springframework.beans.factory.annotation.Autowired
   public OrderApiController(OrderRepository repo,
@@ -62,7 +63,8 @@ public class OrderApiController {
                             @org.springframework.beans.factory.annotation.Autowired(required = false) ReorderService reorderService,
                             @org.springframework.beans.factory.annotation.Autowired(required = false) OrderStateService orderStateService,
                             @org.springframework.beans.factory.annotation.Autowired(required = false) tacos.messaging.outbox.OutboxService outboxService,
-                            @org.springframework.beans.factory.annotation.Autowired(required = false) tacos.messaging.outbox.OutboxDispatcher outboxDispatcher) {
+                            @org.springframework.beans.factory.annotation.Autowired(required = false) tacos.messaging.outbox.OutboxDispatcher outboxDispatcher,
+                            @org.springframework.beans.factory.annotation.Autowired(required = false) tacos.idempotency.IdempotencyService idempotencyService) {
     this.repo = repo;
     this.orderMessages = orderMessages;
     this.emailOrderService = emailOrderService;
@@ -75,6 +77,7 @@ public class OrderApiController {
     this.orderStateService = orderStateService;
     this.outboxService = outboxService;
     this.outboxDispatcher = outboxDispatcher;
+    this.idempotencyService = idempotencyService;
   }
 
   public OrderApiController(OrderRepository repo,
@@ -85,14 +88,14 @@ public class OrderApiController {
                             InventoryService inventoryService,
                             tacos.physics.TacoPhysicsValidator physicsValidator,
                             OrderMapper orderMapper) {
-    this(repo, orderMessages, emailOrderService, ingredientRepo, pricingService, inventoryService, physicsValidator, orderMapper, null, null, null, null);
+    this(repo, orderMessages, emailOrderService, ingredientRepo, pricingService, inventoryService, physicsValidator, orderMapper, null, null, null, null, null);
   }
 
   public OrderApiController(OrderRepository repo,
                             OrderMessagingService orderMessages,
                             EmailOrderService emailOrderService,
                             IngredientRepository ingredientRepo) {
-    this(repo, orderMessages, emailOrderService, ingredientRepo, null, null, null, new OrderMapper(), null, null, null, null);
+    this(repo, orderMessages, emailOrderService, ingredientRepo, null, null, null, new OrderMapper(), null, null, null, null, null);
   }
 
   @GetMapping(produces="application/json")
@@ -105,7 +108,23 @@ public class OrderApiController {
   // =========================================================================
   @PostMapping(consumes="application/json")
   @ResponseStatus(HttpStatus.CREATED)
-  public Mono<OrderResponse> postOrder(@RequestBody OrderCreateRequest request) {
+  public Mono<OrderResponse> postOrder(
+      @org.springframework.web.bind.annotation.RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+      @javax.validation.Valid @RequestBody OrderCreateRequest request,
+      Principal principal) {
+    Mono<OrderResponse> execution = Mono.defer(() -> doCreateOrder(request));
+    if (idempotencyService != null && idempotencyKey != null && !idempotencyKey.trim().isEmpty()) {
+      String userId = principal != null ? principal.getName() : null;
+      return idempotencyService.process(idempotencyKey, userId, request, execution);
+    }
+    return execution;
+  }
+
+  public Mono<OrderResponse> postOrder(OrderCreateRequest request) {
+    return postOrder(null, request, null);
+  }
+
+  private Mono<OrderResponse> doCreateOrder(OrderCreateRequest request) {
     TacoOrder order = toDomainOrder(request);
     order.setPlacedAt(new Date());
 
@@ -154,7 +173,11 @@ public class OrderApiController {
             // TC-07 / TC-29: Guardar orden y registrar evento en outbox transaccional
             Mono<TacoOrder> saveOrderMono = (outboxService != null)
                 ? outboxService.saveOrderWithOutbox(pricedOrder, tacos.messaging.event.OrderEventType.ORDER_CREATED)
-                : repo.save(pricedOrder).doOnNext(orderMessages::sendOrder);
+                : repo.save(pricedOrder).doOnNext(o -> {
+                    if (orderMessages != null) {
+                      orderMessages.sendOrder(o);
+                    }
+                  });
 
             return reserveMono.then(saveOrderMono)
                 .flatMap(saved -> {
@@ -208,8 +231,8 @@ public class OrderApiController {
   // =========================================================================
   @PostMapping(path="fromEmail", consumes="application/json")
   @ResponseStatus(HttpStatus.CREATED)
-  public Mono<OrderResponse> postOrderFromEmail(@RequestBody Mono<EmailOrder> emailOrder) {
-    return emailOrderService.convertEmailOrderToDomainOrder(emailOrder)
+  public Mono<OrderResponse> postOrderFromEmail(@RequestBody EmailOrder emailOrder) {
+    return emailOrderService.convertEmailOrderToDomainOrder(Mono.justOrEmpty(emailOrder))
         .flatMap(repo::save)
         .doOnNext(orderMessages::sendOrder)
         .map(this::toOrderResponse);
@@ -405,16 +428,6 @@ public class OrderApiController {
 
   private OrderResponse toOrderResponse(TacoOrder order) {
     return orderMapper.toResponse(order);
-  }
-
-  @ExceptionHandler({
-      IllegalArgumentException.class,
-      com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException.class,
-      org.springframework.core.codec.DecodingException.class,
-      org.springframework.web.server.ServerWebInputException.class
-  })
-  public ResponseEntity<String> handleDecodingException(Exception ex) {
-    return ResponseEntity.badRequest().body("Invalid request: " + ex.getMessage());
   }
 
 }

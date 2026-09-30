@@ -1,0 +1,332 @@
+openapi: 3.0.3
+info:
+  title: Taco Cloud Reactive API
+  description: Reactive Taco Cloud REST API supporting non-blocking order placement, pricing, inventory reservation, idempotency, and transactional outbox.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+paths:
+  /api/v1/orders:
+    post:
+      summary: Place a new taco order
+      description: Creates and prices an order, verifies physical constraints, reserves inventory, and dispatches an outbox event. Supports idempotency via Idempotency-Key header.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Unique client key (max 64 chars, alphanumeric, hyphens, underscores) to guarantee idempotent order creation.
+          schema:
+            type: string
+            maxLength: 64
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: Distributed correlation ID for end-to-end trace correlation.
+          schema:
+            type: string
+            maxLength: 64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreateRequest'
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          description: Invalid request syntax, invalid parameters or malformed Idempotency-Key
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '409':
+          description: Conflict (e.g. Idempotency-Key payload mismatch, or request in progress)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '422':
+          description: Unprocessable entity due to business rule or taco physics violations
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+    get:
+      summary: Retrieve all orders
+      description: Returns a reactive stream of all placed orders.
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderResponse'
+
+  /api/v1/ingredients:
+    get:
+      summary: List all catalog ingredients
+      description: Returns all available ingredients with types and unit prices.
+      responses:
+        '200':
+          description: List of ingredients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Ingredient'
+
+  /api/v1/tacos:
+    get:
+      summary: List or search tacos
+      description: Retrieves catalog tacos with optional pagination, filtering, and sorting.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Search term matching taco name or ingredient
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of tacos
+          content:
+            application/json:
+              schema:
+                type: array
+  /api/v1/kitchen/queue:
+    get:
+      summary: Retrieve kitchen orders queue
+      description: Returns orders pending preparation in kitchen.
+      responses:
+        '200':
+          description: Kitchen orders queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderResponse'
+
+  /api/v1/users/me/orders:
+    get:
+      summary: Get paginated order history of current user
+      description: Returns authenticated user's private order history.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Paginated orders
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/v1/announcements:
+    get:
+      summary: Get active operational announcements
+      description: Returns active system notices and operational announcements.
+      responses:
+        '200':
+          description: List of active announcements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+components:
+  schemas:
+    Ingredient:
+      type: object
+      required:
+        - id
+        - name
+        - type
+      properties:
+        id:
+          type: string
+          example: FLTO
+        name:
+          type: string
+          example: Flour Tortilla
+        type:
+          type: string
+          enum: [WRAP, PROTEIN, VEGGIES, CHEESE, SAUCE]
+          example: WRAP
+        unitPrice:
+          type: number
+          format: double
+          example: 1.50
+
+    Taco:
+      type: object
+      required:
+        - name
+        - ingredients
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          example: Carnitas Especial
+        createdAt:
+          type: string
+          format: date-time
+        ingredients:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ingredient'
+
+    OrderItemRequest:
+      type: object
+      required:
+        - taco
+        - quantity
+      properties:
+        taco:
+          $ref: '#/components/schemas/Taco'
+        quantity:
+          type: integer
+          minimum: 1
+          example: 2
+
+    OrderCreateRequest:
+      type: object
+      required:
+        - deliveryName
+        - deliveryStreet
+        - deliveryCity
+        - deliveryState
+        - deliveryZip
+      properties:
+        id:
+          type: string
+        deliveryName:
+          type: string
+          example: Craig Walls
+        deliveryStreet:
+          type: string
+          example: 1234 7th Street
+        deliveryCity:
+          type: string
+          example: Cross Roads
+        deliveryState:
+          type: string
+          example: TX
+        deliveryZip:
+          type: string
+          example: 76227
+        ccNumber:
+          type: string
+          description: Customer credit card number (tokenized or encrypted, never returned in responses)
+          example: "4111111111111111"
+        ccExpiration:
+          type: string
+          example: "12/28"
+        ccCVV:
+          type: string
+          description: Security code (never returned in responses)
+          example: "123"
+        couponCode:
+          type: string
+          example: "TACO10"
+        tacos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Taco'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemRequest'
+
+    OrderResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "60c72b2f9b1d8b2bad123456"
+        deliveryName:
+          type: string
+        deliveryStreet:
+          type: string
+        deliveryCity:
+          type: string
+        deliveryState:
+          type: string
+        deliveryZip:
+          type: string
+        placedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          example: "SUBMITTED"
+        total:
+          type: number
+          format: double
+          example: 14.50
+        discount:
+          type: number
+          format: double
+          example: 1.50
+        tacos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Taco'
+
+    ApiProblem:
+      type: object
+      required:
+        - status
+        - title
+      properties:
+        type:
+          type: string
+          format: uri
+          example: "https://tacocloud.com/probs/validation-error"
+        title:
+          type: string
+          example: "Validation Error"
+        status:
+          type: integer
+          example: 400
+        detail:
+          type: string
+          example: "Input validation failed"
+        instance:
+          type: string
+          example: "/api/v1/orders"
+        code:
+          type: string
+          example: "VALIDATION_FAILED"
+        correlationId:
+          type: string
+          example: "c4b3f17a-8f12-421b-80a5-f938923a9b1c"
+        violations:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string

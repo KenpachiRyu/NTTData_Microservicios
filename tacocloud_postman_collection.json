@@ -1,0 +1,877 @@
+{
+  "info": {
+    "_postman_id": "407675ff-0942-4efc-9c26-079abe4f9c6b",
+    "name": "Taco Cloud Reactive API - Automated Test Suite",
+    "description": "Suite automatizada de pruebas para Postman Collection v2.1.0 cubriendo los retos funcionales TC-01 a TC-36 de Taco Cloud.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "TC-02: POST /api/v1/ingredients (Crear Ingrediente PIMT - ADMIN)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic YWRtaW46cGFzc3dvcmQ="
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"PIMT\",\n  \"name\": \"Pimiento Verde\",\n  \"type\": \"VEGGIES\",\n  \"unitPrice\": 0.65\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/ingredients",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "ingredients"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 201 Created\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "pm.test(\"Response time is below 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "pm.test(\"Contains Location header\", function () {",
+              "    pm.response.to.have.header(\"Location\");",
+              "});",
+              "pm.test(\"Returns correct ingredient payload\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.id).to.eql(\"PIMT\");",
+              "    pm.expect(json.name).to.eql(\"Pimiento Verde\");",
+              "    pm.expect(json.type).to.eql(\"VEGGIES\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-01: PUT /api/v1/ingredients/FLTO (Actualizar Ingrediente - ADMIN)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic YWRtaW46cGFzc3dvcmQ="
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"FLTO\",\n  \"name\": \"Flour Tortilla Extra Soft\",\n  \"type\": \"WRAP\",\n  \"unitPrice\": 1.25\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/ingredients/FLTO",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "ingredients",
+            "FLTO"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Response time is below 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "pm.test(\"Updated ingredient name verified\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.name).to.eql(\"Flour Tortilla Extra Soft\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-03: DELETE /api/v1/ingredients/COTO (Eliminar Ingrediente - ADMIN)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic YWRtaW46cGFzc3dvcmQ="
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/v1/ingredients/COTO",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "ingredients",
+            "COTO"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 204 No Content\", function () {",
+              "    pm.response.to.have.status(204);",
+              "});",
+              "pm.test(\"Response time is below 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-10: GET /api/v1/orders (Sin Autenticación - Negativa)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/v1/orders",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "orders"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 401 Unauthorized\", function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "pm.test(\"Response time is below 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "pm.test(\"Has WWW-Authenticate header\", function () {",
+              "    pm.response.to.have.header(\"WWW-Authenticate\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-11: GET /api/v1/orders (Autenticado con craig - USER)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic Y3JhaWc6cGFzc3dvcmQ="
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/v1/orders",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "orders"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Response time is below 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "pm.test(\"Response body is an array of orders\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(Array.isArray(json)).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-12 & TC-14: POST /api/v1/orders (Crear Orden con Cálculo en Servidor e Idempotencia)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic Y3JhaWc6cGFzc3dvcmQ="
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "tc-order-auto-001"
+          },
+          {
+            "key": "X-Correlation-Id",
+            "value": "tc-corr-auto-001"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deliveryName\": \"Craig Walls\",\n  \"deliveryStreet\": \"123 Taco Way\",\n  \"deliveryCity\": \"Austin\",\n  \"deliveryState\": \"TX\",\n  \"deliveryZip\": \"78701\",\n  \"paymentToken\": \"tok_visa_4242\",\n  \"couponCode\": \"TACO10\",\n  \"tacos\": [\n    {\n      \"name\": \"Carnitas Supreme\",\n      \"ingredients\": [\n        {\n          \"id\": \"FLTO\"\n        },\n        {\n          \"id\": \"CARN\"\n        },\n        {\n          \"id\": \"TMTO\"\n        },\n        {\n          \"id\": \"JACK\"\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/orders",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "orders"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 201 Created\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "pm.test(\"Response time is below 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "pm.test(\"Order contains calculated total and discount\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.id).to.not.be.empty;",
+              "    pm.expect(json.total).to.not.be.null;",
+              "    pm.expect(json.discountAmount).to.not.be.null;",
+              "    pm.expect(json.status).to.eql(\"CREATED\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-09: POST /api/v1/orders (Orden Inválida - RFC 9457 Problem Details)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic Y3JhaWc6cGFzc3dvcmQ="
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deliveryName\": \"\",\n  \"deliveryStreet\": \"\",\n  \"tacos\": []\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/orders",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "orders"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 400 Bad Request\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "pm.test(\"Response time is below 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "pm.test(\"Complies with RFC 9457 Problem Details\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql(400);",
+              "    pm.expect(json.title).to.not.be.empty;",
+              "    pm.expect(json.type).to.include(\"probs\");",
+              "    pm.expect(json.code).to.not.be.empty;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-34: POST /api/v1/orders (Misma Idempotency-Key con Payload Alterado - 409 Conflict)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic Y3JhaWc6cGFzc3dvcmQ="
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "tc-order-auto-001"
+          },
+          {
+            "key": "X-Correlation-Id",
+            "value": "tc-corr-auto-002"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deliveryName\": \"Craig Walls Modificado\",\n  \"deliveryStreet\": \"999 Altered St\",\n  \"deliveryCity\": \"Dallas\",\n  \"deliveryState\": \"TX\",\n  \"deliveryZip\": \"75001\",\n  \"paymentToken\": \"tok_mastercard_9999\",\n  \"tacos\": [\n    {\n      \"name\": \"Veggie Delight\",\n      \"ingredients\": [\n        {\n          \"id\": \"TMTO\"\n        },\n        {\n          \"id\": \"LETC\"\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/orders",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "orders"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 409 Conflict\", function () {",
+              "    pm.response.to.have.status(409);",
+              "});",
+              "pm.test(\"Response time is below 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "pm.test(\"Returns idempotency conflict problem\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql(409);",
+              "    pm.expect(json.code).to.include(\"IDEMPOTENCY\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-04: PATCH /api/v1/orders/ORDER-DEMO-001 (Modificar Solo ZIP)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic Y3JhaWc6cGFzc3dvcmQ="
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deliveryZip\": \"90210\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/orders/ORDER-DEMO-001",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "orders",
+            "ORDER-DEMO-001"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Response time is below 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "pm.test(\"ZIP updated while state remains intact\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.deliveryZip).to.eql(\"90210\");",
+              "    pm.expect(json.deliveryState).to.eql(\"TX\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-25: GET /api/v1/kitchen/queue (Consultar Cola de Cocina - ADMIN)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic YWRtaW46cGFzc3dvcmQ="
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/v1/kitchen/queue",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "kitchen",
+            "queue"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Response time is below 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "pm.test(\"Queue returns an array of kitchen orders\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(Array.isArray(json)).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-26: POST /api/v1/kitchen/orders/ORDER-DEMO-001/claim (Reclamo Atómico de Pedido)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic YWRtaW46cGFzc3dvcmQ="
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cookId\": \"cook-mario\",\n  \"stationId\": \"STATION-GRILL-1\",\n  \"estimatedPrepMinutes\": 10\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/kitchen/orders/ORDER-DEMO-001/claim",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "kitchen",
+            "orders",
+            "ORDER-DEMO-001",
+            "claim"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Response time is below 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "pm.test(\"Order status transitions to ACCEPTED or PREPARING\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect([\"ACCEPTED\", \"PREPARING\"]).to.include(json.status);",
+              "    pm.expect(json.cookId).to.eql(\"cook-mario\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-31: GET /api/v1/tacos?trace=true (Trazabilidad con Correlation-ID)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Correlation-Id",
+            "value": "tc-trace-auto-001"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/v1/tacos?trace=true",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "tacos"
+          ],
+          "query": [
+            {
+              "key": "trace",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Response time is below 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "pm.test(\"Echoes X-Correlation-Id header in response\", function () {",
+              "    pm.response.to.have.header(\"X-Correlation-Id\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-20: GET /api/v1/tacos/today (Taco del Día)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/v1/tacos/today",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "tacos",
+            "today"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Response time is below 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "pm.test(\"Taco of the day contains valid taco structure\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.name).to.not.be.empty;",
+              "    pm.expect(json.taco).to.not.be.null;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-21: POST /api/v1/users/me/favorites (Favorito de Usuario - craig)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic Y3JhaWc6cGFzc3dvcmQ="
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tacoId\": \"TACO1\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/users/me/favorites",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "users",
+            "me",
+            "favorites"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Response time is below 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "pm.test(\"Favorite taco saved successfully\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.tacoId).to.eql(\"TACO1\");",
+              "    pm.expect(json.username).to.eql(\"craig\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC-33: GET /actuator/prometheus (Métricas Micrometer - ADMIN)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Basic YWRtaW46cGFzc3dvcmQ="
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/actuator/prometheus",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "actuator",
+            "prometheus"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Response time is below 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "pm.test(\"Contains Prometheus JVM metrics\", function () {",
+              "    pm.expect(pm.response.text()).to.include(\"jvm_\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

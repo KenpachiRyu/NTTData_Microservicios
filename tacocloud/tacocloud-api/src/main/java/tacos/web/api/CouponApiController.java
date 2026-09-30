@@ -29,7 +29,7 @@ public class CouponApiController {
     this.pricingService = pricingService;
   }
 
-  @PostMapping(path = "/api/coupons/validate", consumes = "application/json", produces = "application/json")
+  @PostMapping(path = {"/api/v1/coupons/validate", "/api/coupons/validate"}, consumes = "application/json", produces = "application/json")
   public Mono<ResponseEntity<CouponValidateResponse>> validateCoupon(
       @Valid @RequestBody CouponValidateRequest request) {
 
@@ -46,7 +46,7 @@ public class CouponApiController {
     return Mono.just(ResponseEntity.ok(response));
   }
 
-  @PostMapping(path = "/api/orders/quote", consumes = "application/json", produces = "application/json")
+  @PostMapping(path = {"/api/v1/orders/quote", "/api/orders/quote"}, consumes = "application/json", produces = "application/json")
   public Mono<ResponseEntity<QuoteResponse>> quoteOrder(@RequestBody QuoteRequest request) {
     TacoOrder draftOrder = new TacoOrder();
 

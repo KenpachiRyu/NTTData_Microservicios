@@ -64,11 +64,15 @@ public class OutboxService {
   }
 
   public Mono<TacoOrder> saveOrderWithOutbox(TacoOrder order, OrderEventType eventType) {
+    return saveOrderWithOutbox(order, eventType, null);
+  }
+
+  public Mono<TacoOrder> saveOrderWithOutbox(TacoOrder order, OrderEventType eventType, String correlationId) {
     if (order.getId() == null) {
       order.setId(UUID.randomUUID().toString());
     }
 
-    OrderEvent event = OrderEventMapper.toOrderEvent(order, eventType);
+    OrderEvent event = OrderEventMapper.toOrderEvent(order, eventType, correlationId);
 
     String payloadJson;
     try {
@@ -80,6 +84,7 @@ public class OutboxService {
     OutboxEvent outboxEvent = OutboxEvent.builder()
         .id(UUID.randomUUID().toString())
         .eventId(event.getEventId())
+        .correlationId(event.getCorrelationId())
         .aggregateType("ORDER")
         .aggregateId(order.getId())
         .eventType(eventType.name())

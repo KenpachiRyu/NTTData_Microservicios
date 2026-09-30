@@ -19,9 +19,9 @@ public class TacoCountInfoContributor implements InfoContributor {
 
   @Override
   public void contribute(Builder builder) {
-    long tacoCount = tacoRepo.count().block();
+    Long tacoCount = tacoRepo.count().block();
     Map<String, Object> tacoMap = new HashMap<String, Object>();
-    tacoMap.put("count", tacoCount);
+    tacoMap.put("count", tacoCount != null ? tacoCount : 0L);
     builder.withDetail("taco-stats", tacoMap);
   }
 }

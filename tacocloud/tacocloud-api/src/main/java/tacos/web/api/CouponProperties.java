@@ -34,6 +34,14 @@ public class CouponProperties {
         }
       }
     }
+    // Registrar cupón demo TACO10 por defecto
+    if (!coupons.containsKey("TACO10")) {
+      CouponDefinition taco10 = new CouponDefinition();
+      taco10.setCode("TACO10");
+      taco10.setType(DiscountType.PERCENTAGE);
+      taco10.setAmount(BigDecimal.valueOf(10));
+      coupons.put("TACO10", taco10);
+    }
   }
 
   public CouponDefinition findCoupon(String code) {

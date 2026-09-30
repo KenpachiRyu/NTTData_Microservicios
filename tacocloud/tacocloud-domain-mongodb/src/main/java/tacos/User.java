@@ -15,13 +15,13 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 
 @Data
-@NoArgsConstructor(access=AccessLevel.PRIVATE, force=true)
-@RequiredArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
+@AllArgsConstructor
 @Document
 public class User implements UserDetails {
 
@@ -31,20 +31,34 @@ public class User implements UserDetails {
   private String id;
 
   @Indexed(unique = true)
-  private final String username;
+  private String username;
 
-  private final String password;
-  private final String fullname;
-  private final String street;
-  private final String city;
-  private final String state;
-  private final String zip;
-  private final String phoneNumber;
+  private String password;
+  private String fullname;
+  private String street;
+  private String city;
+  private String state;
+  private String zip;
+  private String phoneNumber;
 
   @Indexed(unique = true)
-  private final String email;
+  private String email;
 
   private List<String> roles = new ArrayList<>();
+
+  public User(String username, String password, String fullname, String street, 
+              String city, String state, String zip, String phoneNumber, String email) {
+    this.username = username;
+    this.password = password;
+    this.fullname = fullname;
+    this.street = street;
+    this.city = city;
+    this.state = state;
+    this.zip = zip;
+    this.phoneNumber = phoneNumber;
+    this.email = email;
+    this.roles = new ArrayList<>(Collections.singletonList("ROLE_USER"));
+  }
 
   public void addRole(String role) {
     if (this.roles == null) {

@@ -43,4 +43,31 @@ public class OrderCreateRequest {
   public boolean hasItemsOrTacos() {
     return (items != null && !items.isEmpty()) || (tacos != null && !tacos.isEmpty());
   }
+
+  // Métodos de compatibilidad segura: tokenizan ccNumber y descartan CVV (TC-12)
+  public String getCcNumber() {
+    return paymentToken;
+  }
+
+  public void setCcNumber(String ccNumber) {
+    if ((this.paymentToken == null || this.paymentToken.isEmpty()) && ccNumber != null && !ccNumber.isEmpty()) {
+      this.paymentToken = ccNumber.startsWith("tok_") ? ccNumber : "tok_" + Math.abs(ccNumber.hashCode());
+    }
+  }
+
+  public String getCcCVV() {
+    return null;
+  }
+
+  public void setCcCVV(String ccCVV) {
+    // Descartado estrictamente para seguridad PCI-DSS (TC-12)
+  }
+
+  public String getCcExpiration() {
+    return null;
+  }
+
+  public void setCcExpiration(String ccExpiration) {
+    // Opcional en el request, token de pago representa el método
+  }
 }
